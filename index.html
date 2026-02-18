@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>noema — credit where credit's due</title>
+<meta name="description" content="Bitcoin-native attribution for the age of AI. Preserve human insight credit under LLM reuse.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #08080d;
+  --bg-panel: #0e0e16;
+  --bg-card: #13131f;
+  --border: #1e1e2e;
+  --text: #c8c8d8;
+  --text-dim: #6e6e84;
+  --text-hi: #e8e8f0;
+  --btc: #f7931a;
+  --cyan: #22d3ee;
+  --emerald: #34d399;
+  --violet: #a78bfa;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--text-hi); }
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: rgba(8, 8, 13, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 300;
+  font-size: 1.4rem;
+  color: var(--btc);
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.nav-links a {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.nav-links a:hover { color: var(--text-hi); }
+
+.btn-signin {
+  font-size: 0.85rem;
+  padding: 0.4rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btn-signin:hover {
+  border-color: var(--text-dim);
+  color: var(--text-hi);
+}
+
+/* HERO */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 8rem 2rem 4rem;
+  text-align: center;
+}
+
+.hero-tagline {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  color: var(--text-hi);
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-bottom: 3rem;
+  max-width: 480px;
+}
+
+.download-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+
+.btn-download:hover {
+  border-color: var(--text-dim);
+  background: var(--bg-panel);
+}
+
+.btn-download.active {
+  border-color: var(--btc);
+  color: var(--text-hi);
+}
+
+.btn-download .os-icon {
+  font-size: 1.1rem;
+}
+
+.install-snippet {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 1.2rem;
+  margin-top: 0.5rem;
+  max-width: 520px;
+}
+
+.install-snippet code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.install-snippet .copy-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.install-snippet .copy-btn:hover { color: var(--text-hi); }
+
+/* EKG SECTION */
+.ekg-section {
+  position: relative;
+  width: 100%;
+  height: 520px;
+  overflow: hidden;
+}
+
+.ekg-section canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ekg-overlay {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(8px);
+  background: radial-gradient(ellipse at center, transparent 10%, var(--bg) 75%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.ekg-overlay h2 {
+  font-weight: 400;
+  font-size: 1.5rem;
+  color: var(--text-hi);
+}
+
+.btn-explore {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2rem;
+  background: var(--btc);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.btn-explore:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 24px rgba(247, 147, 26, 0.3);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(247, 147, 26, 0); }
+  50% { box-shadow: 0 0 20px 4px rgba(247, 147, 26, 0.15); }
+}
+
+/* VALUE PROPS */
+.value-props {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 6rem 2rem;
+}
+
+.value-prop h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-hi);
+  margin-bottom: 0.5rem;
+}
+
+.value-prop p {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  font-weight: 300;
+}
+
+/* PRICING */
+.pricing {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 2rem 6rem;
+  text-align: center;
+}
+
+.pricing h2 {
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: var(--text-hi);
+  margin-bottom: 2.5rem;
+}
+
+.pricing-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.pricing-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+}
+
+.pricing-card h3 {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--text-hi);
+  margin-bottom: 0.25rem;
+}
+
+.pricing-card .price {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--btc);
+  margin-bottom: 1rem;
+}
+
+.pricing-card ul {
+  list-style: none;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+
+.pricing-card ul li {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  padding: 0.3rem 0;
+}
+
+.pricing-card ul li::before {
+  content: "—";
+  margin-right: 0.5rem;
+  color: var(--border);
+}
+
+.btn-pricing {
+  display: inline-block;
+  text-align: center;
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-pricing.primary {
+  background: var(--btc);
+  color: var(--bg);
+}
+
+.btn-pricing.primary:hover {
+  box-shadow: 0 4px 16px rgba(247, 147, 26, 0.25);
+}
+
+.btn-pricing.secondary {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-pricing.secondary:hover {
+  border-color: var(--text-dim);
+}
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.footer-logo {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 300;
+  font-size: 1.1rem;
+  color: var(--btc);
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footer-links a {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.footer-links a:hover { color: var(--text-hi); }
+
+.footer-copy {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  nav { padding: 0.75rem 1.25rem; }
+  .nav-links { gap: 1.25rem; }
+
+  .hero { padding: 6rem 1.5rem 3rem; }
+
+  .value-props {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 4rem 1.5rem;
+  }
+
+  .pricing-cards {
+    grid-template-columns: 1fr;
+  }
+
+  footer {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .ekg-section { height: 380px; }
+}
+
+@media (max-width: 480px) {
+  .download-row { flex-direction: column; align-items: center; }
+  .install-snippet { flex-direction: column; text-align: center; }
+  .install-snippet code { font-size: 0.75rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-logo">noema</a>
+  <div class="nav-links">
+    <a href="#pricing">Pricing</a>
+    <a href="https://github.com/Exa-Fuse/noema" target="_blank">GitHub</a>
+    <a href="#" class="btn-signin">Sign In</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <h1 class="hero-tagline">credit where credit's due</h1>
+  <p class="hero-subtitle">Bitcoin-native attribution for the age of AI</p>
+
+  <div class="download-row">
+    <a href="#" class="btn-download" data-os="mac">
+      <span class="os-icon">&#63743;</span> macOS
+    </a>
+    <a href="#" class="btn-download" data-os="linux">
+      <span class="os-icon">&#9679;</span> Linux
+    </a>
+    <a href="#" class="btn-download" data-os="win">
+      <span class="os-icon">&#9632;</span> Windows
+    </a>
+    <a href="#" class="btn-download" data-os="zotero">
+      <span class="os-icon">Z</span> Zotero Plugin
+    </a>
+  </div>
+
+  <div class="install-snippet">
+    <code>curl -fsSL https://noema-agi.com/install.sh | sh</code>
+    <button class="copy-btn" onclick="copyInstall()" title="Copy">&#9776;</button>
+  </div>
+</section>
+
+<!-- EKG CANVAS -->
+<section class="ekg-section">
+  <canvas id="ekg-canvas"></canvas>
+  <div class="ekg-overlay">
+    <h2>Explore the Epistemic Knowledge Graph</h2>
+    <a href="#" class="btn-explore">Explore the EKG &rarr;</a>
+  </div>
+</section>
+
+<!-- VALUE PROPS -->
+<section class="value-props">
+  <div class="value-prop">
+    <h3>Atomic Claims</h3>
+    <p>Every insight is a signed, bonded, citable unit</p>
+  </div>
+  <div class="value-prop">
+    <h3>Living Attribution</h3>
+    <p>Credit flows dynamically as knowledge is reused</p>
+  </div>
+  <div class="value-prop">
+    <h3>Bitcoin-Native</h3>
+    <p>Bonded with sats, settled on Lightning</p>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <h2>Pricing</h2>
+  <div class="pricing-cards">
+    <div class="pricing-card">
+      <h3>Local</h3>
+      <div class="price">Free</div>
+      <ul>
+        <li>Run your own node</li>
+        <li>Extract with Zotero</li>
+        <li>Full protocol access</li>
+        <li>Self-hosted EKG</li>
+      </ul>
+      <a href="#" class="btn-pricing secondary">Download</a>
+    </div>
+    <div class="pricing-card">
+      <h3>Cloud EKG</h3>
+      <div class="price">$TBD/mo</div>
+      <ul>
+        <li>Global knowledge graph</li>
+        <li>Lightning rewards</li>
+        <li>Real-time attribution</li>
+        <li>API access</li>
+      </ul>
+      <a href="#" class="btn-pricing primary">Subscribe</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">noema</span>
+  <div class="footer-links">
+    <a href="https://github.com/Exa-Fuse/noema" target="_blank">GitHub</a>
+    <a href="#">Docs</a>
+    <a href="#">Discord</a>
+    <a href="#">X</a>
+  </div>
+  <span class="footer-copy">&copy; 2026 Noema</span>
+</footer>
+
+<script>
+// OS auto-detect
+(function() {
+  const ua = navigator.userAgent.toLowerCase();
+  let os = 'mac';
+  if (ua.includes('win')) os = 'win';
+  else if (ua.includes('linux')) os = 'linux';
+  const btn = document.querySelector(`.btn-download[data-os="${os}"]`);
+  if (btn) btn.classList.add('active');
+})();
+
+// Copy install command
+function copyInstall() {
+  const text = 'curl -fsSL https://noema-agi.com/install.sh | sh';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓';
+    setTimeout(() => { btn.innerHTML = '&#9776;'; }, 1500);
+  });
+}
+
+// EKG Canvas Animation
+(function() {
+  const canvas = document.getElementById('ekg-canvas');
+  const ctx = canvas.getContext('2d');
+  const colors = ['#22d3ee', '#34d399', '#a78bfa', '#fbbf24', '#fb7185'];
+  const NODE_COUNT = 40;
+  const EDGE_COUNT = 60;
+  const DAMPING = 0.98;
+  const SPRING_K = 0.0003;
+  const REST_LEN = 120;
+  const REPULSION = 800;
+  const FRAME_INTERVAL = 1000 / 15;
+
+  let nodes = [];
+  let edges = [];
+  let lastFrame = 0;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  function init() {
+    resize();
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+
+    nodes = [];
+    for (let i = 0; i < NODE_COUNT; i++) {
+      nodes.push({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: 3 + Math.random() * 4,
+        color: colors[i % colors.length]
+      });
+    }
+
+    edges = [];
+    for (let i = 0; i < EDGE_COUNT; i++) {
+      let a = Math.floor(Math.random() * NODE_COUNT);
+      let b = Math.floor(Math.random() * NODE_COUNT);
+      if (a === b) b = (b + 1) % NODE_COUNT;
+      edges.push([a, b]);
+    }
+  }
+
+  function tick() {
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+
+    // Repulsion between all pairs
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let dx = nodes[j].x - nodes[i].x;
+        let dy = nodes[j].y - nodes[i].y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1) d2 = 1;
+        let f = REPULSION / d2;
+        let fx = f * dx / Math.sqrt(d2);
+        let fy = f * dy / Math.sqrt(d2);
+        nodes[i].vx -= fx;
+        nodes[i].vy -= fy;
+        nodes[j].vx += fx;
+        nodes[j].vy += fy;
+      }
+    }
+
+    // Spring along edges
+    for (const [a, b] of edges) {
+      let dx = nodes[b].x - nodes[a].x;
+      let dy = nodes[b].y - nodes[a].y;
+      let d = Math.sqrt(dx * dx + dy * dy);
+      if (d < 0.1) d = 0.1;
+      let f = SPRING_K * (d - REST_LEN);
+      let fx = f * dx / d;
+      let fy = f * dy / d;
+      nodes[a].vx += fx;
+      nodes[a].vy += fy;
+      nodes[b].vx -= fx;
+      nodes[b].vy -= fy;
+    }
+
+    // Gravity toward center
+    const cx = w / 2, cy = h / 2;
+    for (const n of nodes) {
+      n.vx += (cx - n.x) * 0.00005;
+      n.vy += (cy - n.y) * 0.00005;
+      n.vx *= DAMPING;
+      n.vy *= DAMPING;
+      n.x += n.vx;
+      n.y += n.vy;
+      // Soft boundary
+      if (n.x < 20) n.vx += 0.1;
+      if (n.x > w - 20) n.vx -= 0.1;
+      if (n.y < 20) n.vy += 0.1;
+      if (n.y > h - 20) n.vy -= 0.1;
+    }
+  }
+
+  function draw() {
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+    ctx.clearRect(0, 0, w, h);
+
+    // Edges
+    ctx.lineWidth = 0.5;
+    for (const [a, b] of edges) {
+      ctx.strokeStyle = 'rgba(30, 30, 46, 0.8)';
+      ctx.beginPath();
+      ctx.moveTo(nodes[a].x, nodes[a].y);
+      ctx.lineTo(nodes[b].x, nodes[b].y);
+      ctx.stroke();
+    }
+
+    // Nodes
+    for (const n of nodes) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = n.color;
+      ctx.globalAlpha = 0.7;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop(ts) {
+    requestAnimationFrame(loop);
+    if (ts - lastFrame < FRAME_INTERVAL) return;
+    lastFrame = ts;
+    tick();
+    draw();
+  }
+
+  init();
+  requestAnimationFrame(loop);
+  window.addEventListener('resize', resize);
+})();
+</script>
+
+</body>
+</html>
