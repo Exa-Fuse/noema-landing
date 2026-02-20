@@ -793,6 +793,16 @@ function copyInstall() {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+
+    // Live data badge
+    if (liveData) {
+      ctx.save();
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#22d3ee';
+      ctx.font = '10px monospace';
+      ctx.fillText('LIVE · ' + nodes.length + ' AKOs · ' + edges.length + ' connectors', 12, 18);
+      ctx.restore();
+    }
   }
 
   function loop(ts) {
