@@ -92,6 +92,18 @@ nav {
   color: var(--text-hi);
 }
 
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.nav-user-name {
+  font-size: 0.85rem;
+  color: var(--emerald);
+  font-weight: 500;
+}
+
 /* HERO */
 .hero {
   display: flex;
@@ -475,7 +487,11 @@ footer {
   <div class="nav-links">
     <a href="#pricing">Pricing</a>
     <a href="https://github.com/Exa-Fuse/noema" target="_blank">GitHub</a>
-    <a href="#" class="btn-signin">Sign In</a>
+    <a href="#" class="btn-signin" id="btn-signin">Sign In with ORCID</a>
+    <span class="nav-user" id="nav-user" style="display:none">
+      <span class="nav-user-name" id="nav-user-name"></span>
+      <a href="#" class="btn-signin" id="btn-signout">Sign Out</a>
+    </span>
   </div>
 </nav>
 
@@ -836,6 +852,74 @@ function copyInstall() {
     .then(r => r.json())
     .then(data => { initFromAPI(data); })
     .catch(() => { /* keep fallback */ });
+})();
+
+// Session handling — ORCID sign-in
+(function() {
+  const API_URL = 'https://ako-production.up.railway.app';
+  const signinBtn = document.getElementById('btn-signin');
+  const signoutBtn = document.getElementById('btn-signout');
+  const navUser = document.getElementById('nav-user');
+  const navUserName = document.getElementById('nav-user-name');
+
+  // Check for token in URL fragment (from OAuth callback redirect)
+  const hash = window.location.hash;
+  if (hash.includes('token=')) {
+    const token = hash.split('token=')[1].split('&')[0];
+    if (token) {
+      localStorage.setItem('ako_session', token);
+      window.location.hash = '';
+    }
+  }
+
+  function showSignedIn(name) {
+    signinBtn.style.display = 'none';
+    navUser.style.display = 'flex';
+    navUserName.textContent = name;
+  }
+
+  function showSignedOut() {
+    signinBtn.style.display = '';
+    navUser.style.display = 'none';
+    navUserName.textContent = '';
+  }
+
+  // Check session on load
+  const token = localStorage.getItem('ako_session');
+  if (token) {
+    fetch(API_URL + '/v1/auth/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(data => {
+      const name = (data.given_name + ' ' + data.family_name).trim() || data.orcid;
+      showSignedIn(name + (data.verified ? ' \u2713' : ''));
+    })
+    .catch(() => {
+      localStorage.removeItem('ako_session');
+      showSignedOut();
+    });
+  }
+
+  // Sign in button
+  signinBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    window.location.href = API_URL + '/v1/auth/orcid?return_url=' + encodeURIComponent(window.location.origin + window.location.pathname);
+  });
+
+  // Sign out button
+  signoutBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    const t = localStorage.getItem('ako_session');
+    if (t) {
+      fetch(API_URL + '/v1/auth/logout', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + t }
+      });
+    }
+    localStorage.removeItem('ako_session');
+    showSignedOut();
+  });
 })();
 </script>
 
