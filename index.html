@@ -247,6 +247,40 @@ nav {
   50% { box-shadow: 0 0 20px 4px rgba(247, 147, 26, 0.15); }
 }
 
+.ekg-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+.ekg-tooltip {
+  position: absolute;
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  max-width: 320px;
+  pointer-events: none;
+  z-index: 10;
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.4;
+}
+
+.ekg-tooltip .ako-class-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+.ekg-section canvas.interactive { cursor: crosshair; }
+
 /* VALUE PROPS */
 .value-props {
   display: grid;
@@ -474,10 +508,11 @@ footer {
 <!-- EKG CANVAS -->
 <section class="ekg-section">
   <canvas id="ekg-canvas"></canvas>
-  <div class="ekg-overlay">
+  <div class="ekg-overlay" id="ekg-overlay">
     <h2>Explore the Epistemic Knowledge Graph</h2>
-    <a href="#" class="btn-explore">Explore the EKG &rarr;</a>
+    <button class="btn-explore" id="btn-explore">Explore the EKG &rarr;</button>
   </div>
+  <div class="ekg-tooltip" id="ekg-tooltip"></div>
 </section>
 
 <!-- VALUE PROPS -->
@@ -558,13 +593,23 @@ function copyInstall() {
   });
 }
 
-// EKG Canvas Animation
+// EKG Canvas Animation — wired to live /v1/graph API
 (function() {
+  const API_URL = 'https://ako-node-production.up.railway.app';
   const canvas = document.getElementById('ekg-canvas');
   const ctx = canvas.getContext('2d');
-  const colors = ['#22d3ee', '#34d399', '#a78bfa', '#fbbf24', '#fb7185'];
-  const NODE_COUNT = 40;
-  const EDGE_COUNT = 60;
+  const tooltip = document.getElementById('ekg-tooltip');
+  const overlay = document.getElementById('ekg-overlay');
+  const exploreBtn = document.getElementById('btn-explore');
+
+  const CLASS_COLORS = {
+    F: '#22d3ee', // cyan — formal
+    E: '#34d399', // emerald — empirical
+    M: '#a78bfa', // violet — model
+    I: '#fbbf24', // amber — interpretive
+    R: '#fb7185', // rose — regime constraint
+  };
+  const FALLBACK_COLORS = ['#22d3ee', '#34d399', '#a78bfa', '#fbbf24', '#fb7185'];
   const DAMPING = 0.98;
   const SPRING_K = 0.0003;
   const REST_LEN = 120;
@@ -574,6 +619,8 @@ function copyInstall() {
   let nodes = [];
   let edges = [];
   let lastFrame = 0;
+  let interactive = false;
+  let liveData = false;
 
   function resize() {
     const rect = canvas.parentElement.getBoundingClientRect();
@@ -584,10 +631,12 @@ function copyInstall() {
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   }
 
-  function init() {
+  // Build random fallback graph
+  function initFallback() {
     resize();
     const w = canvas.width / devicePixelRatio;
     const h = canvas.height / devicePixelRatio;
+    const NODE_COUNT = 40, EDGE_COUNT = 60;
 
     nodes = [];
     for (let i = 0; i < NODE_COUNT; i++) {
@@ -597,7 +646,8 @@ function copyInstall() {
         vx: (Math.random() - 0.5) * 0.3,
         vy: (Math.random() - 0.5) * 0.3,
         r: 3 + Math.random() * 4,
-        color: colors[i % colors.length]
+        color: FALLBACK_COLORS[i % FALLBACK_COLORS.length],
+        label: null, akoClass: null
       });
     }
 
@@ -610,11 +660,47 @@ function copyInstall() {
     }
   }
 
+  // Build graph from API response
+  function initFromAPI(data) {
+    resize();
+    const w = canvas.width / devicePixelRatio;
+    const h = canvas.height / devicePixelRatio;
+    const apiNodes = data.nodes || [];
+    const apiConns = data.connectors || [];
+
+    if (apiNodes.length === 0) { initFallback(); return; }
+
+    liveData = true;
+    const hashIndex = {};
+    nodes = apiNodes.map((n, i) => {
+      hashIndex[n.hash] = i;
+      return {
+        x: Math.random() * w,
+        y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: 3 + Math.random() * 4,
+        color: CLASS_COLORS[n.ako_class] || '#6e6e84',
+        label: n.canonical_text,
+        akoClass: n.ako_class,
+        hash: n.hash
+      };
+    });
+
+    edges = [];
+    for (const c of apiConns) {
+      const a = hashIndex[c.source_hash];
+      const b = hashIndex[c.target_hash];
+      if (a !== undefined && b !== undefined) {
+        edges.push([a, b, c.role]);
+      }
+    }
+  }
+
   function tick() {
     const w = canvas.width / devicePixelRatio;
     const h = canvas.height / devicePixelRatio;
 
-    // Repulsion between all pairs
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         let dx = nodes[j].x - nodes[i].x;
@@ -631,22 +717,20 @@ function copyInstall() {
       }
     }
 
-    // Spring along edges
-    for (const [a, b] of edges) {
-      let dx = nodes[b].x - nodes[a].x;
-      let dy = nodes[b].y - nodes[a].y;
+    for (const e of edges) {
+      let dx = nodes[e[1]].x - nodes[e[0]].x;
+      let dy = nodes[e[1]].y - nodes[e[0]].y;
       let d = Math.sqrt(dx * dx + dy * dy);
       if (d < 0.1) d = 0.1;
       let f = SPRING_K * (d - REST_LEN);
       let fx = f * dx / d;
       let fy = f * dy / d;
-      nodes[a].vx += fx;
-      nodes[a].vy += fy;
-      nodes[b].vx -= fx;
-      nodes[b].vy -= fy;
+      nodes[e[0]].vx += fx;
+      nodes[e[0]].vy += fy;
+      nodes[e[1]].vx -= fx;
+      nodes[e[1]].vy -= fy;
     }
 
-    // Gravity toward center
     const cx = w / 2, cy = h / 2;
     for (const n of nodes) {
       n.vx += (cx - n.x) * 0.00005;
@@ -655,7 +739,6 @@ function copyInstall() {
       n.vy *= DAMPING;
       n.x += n.vx;
       n.y += n.vy;
-      // Soft boundary
       if (n.x < 20) n.vx += 0.1;
       if (n.x > w - 20) n.vx -= 0.1;
       if (n.y < 20) n.vy += 0.1;
@@ -663,22 +746,29 @@ function copyInstall() {
     }
   }
 
+  const ROLE_COLORS = {
+    implies: 'rgba(34,211,238,0.3)',
+    depends_on: 'rgba(167,139,250,0.3)',
+    evidence_for: 'rgba(52,211,153,0.3)',
+    models: 'rgba(251,191,36,0.3)',
+    analogy_to: 'rgba(251,113,133,0.3)',
+    refutes: 'rgba(251,113,133,0.6)',
+  };
+
   function draw() {
     const w = canvas.width / devicePixelRatio;
     const h = canvas.height / devicePixelRatio;
     ctx.clearRect(0, 0, w, h);
 
-    // Edges
     ctx.lineWidth = 0.5;
-    for (const [a, b] of edges) {
-      ctx.strokeStyle = 'rgba(30, 30, 46, 0.8)';
+    for (const e of edges) {
+      ctx.strokeStyle = (liveData && e[2]) ? (ROLE_COLORS[e[2]] || 'rgba(30,30,46,0.8)') : 'rgba(30,30,46,0.8)';
       ctx.beginPath();
-      ctx.moveTo(nodes[a].x, nodes[a].y);
-      ctx.lineTo(nodes[b].x, nodes[b].y);
+      ctx.moveTo(nodes[e[0]].x, nodes[e[0]].y);
+      ctx.lineTo(nodes[e[1]].x, nodes[e[1]].y);
       ctx.stroke();
     }
 
-    // Nodes
     for (const n of nodes) {
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
@@ -697,9 +787,55 @@ function copyInstall() {
     draw();
   }
 
-  init();
+  // Hover tooltips (only when interactive)
+  canvas.addEventListener('mousemove', function(e) {
+    if (!interactive) { tooltip.style.display = 'none'; return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    let hit = null;
+    for (const n of nodes) {
+      const dx = n.x - mx, dy = n.y - my;
+      if (dx * dx + dy * dy < (n.r + 6) * (n.r + 6)) { hit = n; break; }
+    }
+
+    if (hit && hit.label) {
+      const classNames = { F: 'Formal', E: 'Empirical', M: 'Model', I: 'Interpretive', R: 'Regime' };
+      const tag = hit.akoClass
+        ? `<span class="ako-class-tag" style="background:${hit.color};color:#08080d">${classNames[hit.akoClass] || hit.akoClass}</span>`
+        : '';
+      const text = hit.label.length > 200 ? hit.label.slice(0, 200) + '...' : hit.label;
+      tooltip.innerHTML = tag + text;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+    } else {
+      tooltip.style.display = 'none';
+    }
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    tooltip.style.display = 'none';
+  });
+
+  // Explore button: remove overlay, enable interaction
+  exploreBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    overlay.classList.add('hidden');
+    canvas.classList.add('interactive');
+    interactive = true;
+  });
+
+  // Init: try API, fallback to random
+  initFallback();
   requestAnimationFrame(loop);
   window.addEventListener('resize', resize);
+
+  fetch(API_URL + '/v1/graph')
+    .then(r => r.json())
+    .then(data => { initFromAPI(data); })
+    .catch(() => { /* keep fallback */ });
 })();
 </script>
 
