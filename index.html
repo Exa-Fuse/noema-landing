@@ -40,6 +40,26 @@ body {
 a { color: var(--text); text-decoration: none; transition: color 0.2s; }
 a:hover { color: var(--text-hi); }
 
+/* GRAPH BACKGROUND CANVAS */
+#ekg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+body.graph-mode #ekg-canvas {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: crosshair;
+  z-index: 50;
+}
+
 /* NAV */
 nav {
   position: fixed;
@@ -102,6 +122,18 @@ nav {
   font-size: 0.85rem;
   color: var(--emerald);
   font-weight: 500;
+}
+
+/* LANDING CONTENT — sits above the canvas */
+#landing-content {
+  position: relative;
+  z-index: 10;
+  transition: opacity 0.5s ease;
+}
+
+body.graph-mode #landing-content {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* HERO */
@@ -200,98 +232,6 @@ nav {
 }
 
 .install-snippet .copy-btn:hover { color: var(--text-hi); }
-
-/* EKG SECTION */
-.ekg-section {
-  position: relative;
-  width: 100%;
-  height: 520px;
-  overflow: hidden;
-}
-
-.ekg-section canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.ekg-overlay {
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(8px);
-  background: radial-gradient(ellipse at center, transparent 10%, var(--bg) 75%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.ekg-overlay h2 {
-  font-weight: 400;
-  font-size: 1.5rem;
-  color: var(--text-hi);
-}
-
-.btn-explore {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.85rem 2rem;
-  background: var(--btc);
-  color: var(--bg);
-  font-weight: 600;
-  font-size: 1rem;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.btn-explore:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(247, 147, 26, 0.3);
-}
-
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(247, 147, 26, 0); }
-  50% { box-shadow: 0 0 20px 4px rgba(247, 147, 26, 0.15); }
-}
-
-.ekg-overlay.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s;
-}
-
-.ekg-tooltip {
-  position: absolute;
-  display: none;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.8rem;
-  color: var(--text);
-  max-width: 320px;
-  pointer-events: none;
-  z-index: 10;
-  font-family: 'IBM Plex Mono', monospace;
-  line-height: 1.4;
-}
-
-.ekg-tooltip .ako-class-tag {
-  display: inline-block;
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
-  margin-right: 0.4rem;
-  vertical-align: middle;
-}
-
-.ekg-section canvas.interactive { cursor: crosshair; }
 
 /* VALUE PROPS */
 .value-props {
@@ -446,6 +386,53 @@ footer {
   color: var(--text-dim);
 }
 
+/* GRAPH MODE TOOLTIP */
+.ekg-tooltip {
+  position: fixed;
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  max-width: 320px;
+  pointer-events: none;
+  z-index: 200;
+  font-family: 'IBM Plex Mono', monospace;
+  line-height: 1.4;
+}
+
+.ekg-tooltip .ako-class-tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+/* GRAPH MODE STATS BAR */
+.graph-stats {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(14, 14, 22, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 1.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+body.graph-mode .graph-stats { display: block; }
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
   nav { padding: 0.75rem 1.25rem; }
@@ -468,8 +455,6 @@ footer {
     gap: 1rem;
     text-align: center;
   }
-
-  .ekg-section { height: 380px; }
 }
 
 @media (max-width: 480px) {
@@ -481,11 +466,14 @@ footer {
 </head>
 <body>
 
+<!-- GRAPH BACKGROUND CANVAS (always present) -->
+<canvas id="ekg-canvas"></canvas>
+
 <!-- NAV -->
 <nav>
-  <a href="/" class="nav-logo">noema</a>
+  <a href="/" class="nav-logo" id="nav-logo">noema</a>
   <div class="nav-links">
-    <a href="#pricing">Pricing</a>
+    <a href="#pricing" id="link-pricing">Pricing</a>
     <a href="https://github.com/Exa-Fuse/noema" target="_blank">GitHub</a>
     <a href="#" class="btn-signin" id="btn-signin">Sign In with ORCID</a>
     <span class="nav-user" id="nav-user" style="display:none">
@@ -495,7 +483,9 @@ footer {
   </div>
 </nav>
 
-<!-- HERO -->
+<!-- LANDING CONTENT -->
+<div id="landing-content">
+
 <section class="hero">
   <h1 class="hero-tagline">credit where credit's due</h1>
   <p class="hero-subtitle">Bitcoin-native attribution for the age of AI</p>
@@ -521,17 +511,6 @@ footer {
   </div>
 </section>
 
-<!-- EKG CANVAS -->
-<section class="ekg-section">
-  <canvas id="ekg-canvas"></canvas>
-  <div class="ekg-overlay" id="ekg-overlay">
-    <h2>Explore the Epistemic Knowledge Graph</h2>
-    <button class="btn-explore" id="btn-explore">Explore the EKG &rarr;</button>
-  </div>
-  <div class="ekg-tooltip" id="ekg-tooltip"></div>
-</section>
-
-<!-- VALUE PROPS -->
 <section class="value-props">
   <div class="value-prop">
     <h3>Atomic Claims</h3>
@@ -547,7 +526,6 @@ footer {
   </div>
 </section>
 
-<!-- PRICING -->
 <section class="pricing" id="pricing">
   <h2>Pricing</h2>
   <div class="pricing-cards">
@@ -576,7 +554,6 @@ footer {
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer>
   <span class="footer-logo">noema</span>
   <div class="footer-links">
@@ -587,6 +564,14 @@ footer {
   </div>
   <span class="footer-copy">&copy; 2026 Noema</span>
 </footer>
+
+</div><!-- /landing-content -->
+
+<!-- TOOLTIP (shared) -->
+<div class="ekg-tooltip" id="ekg-tooltip"></div>
+
+<!-- GRAPH MODE STATS -->
+<div class="graph-stats" id="graph-stats"></div>
 
 <script>
 // OS auto-detect
@@ -604,26 +589,25 @@ function copyInstall() {
   const text = 'curl -fsSL https://noema-agi.com/install.sh | sh';
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.querySelector('.copy-btn');
-    btn.textContent = '✓';
+    btn.textContent = '\u2713';
     setTimeout(() => { btn.innerHTML = '&#9776;'; }, 1500);
   });
 }
 
-// EKG Canvas Animation — wired to live /v1/graph API
+// EKG Canvas — background + graph mode
 (function() {
   const API_URL = 'https://ako-production.up.railway.app';
   const canvas = document.getElementById('ekg-canvas');
   const ctx = canvas.getContext('2d');
   const tooltip = document.getElementById('ekg-tooltip');
-  const overlay = document.getElementById('ekg-overlay');
-  const exploreBtn = document.getElementById('btn-explore');
+  const statsBar = document.getElementById('graph-stats');
 
   const CLASS_COLORS = {
-    F: '#22d3ee', // cyan — formal
-    E: '#34d399', // emerald — empirical
-    M: '#a78bfa', // violet — model
-    I: '#fbbf24', // amber — interpretive
-    R: '#fb7185', // rose — regime constraint
+    F: '#22d3ee',
+    E: '#34d399',
+    M: '#a78bfa',
+    I: '#fbbf24',
+    R: '#fb7185',
   };
   const FALLBACK_COLORS = ['#22d3ee', '#34d399', '#a78bfa', '#fbbf24', '#fb7185'];
   const DAMPING = 0.98;
@@ -635,23 +619,21 @@ function copyInstall() {
   let nodes = [];
   let edges = [];
   let lastFrame = 0;
-  let interactive = false;
   let liveData = false;
+  let graphMode = false;
 
   function resize() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width * devicePixelRatio;
-    canvas.height = rect.height * devicePixelRatio;
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   }
 
-  // Build random fallback graph
   function initFallback() {
     resize();
-    const w = canvas.width / devicePixelRatio;
-    const h = canvas.height / devicePixelRatio;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const NODE_COUNT = 40, EDGE_COUNT = 60;
 
     nodes = [];
@@ -676,11 +658,10 @@ function copyInstall() {
     }
   }
 
-  // Build graph from API response
   function initFromAPI(data) {
     resize();
-    const w = canvas.width / devicePixelRatio;
-    const h = canvas.height / devicePixelRatio;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     const apiNodes = data.nodes || [];
     const apiConns = data.connectors || [];
 
@@ -711,11 +692,14 @@ function copyInstall() {
         edges.push([a, b, c.role]);
       }
     }
+
+    // Update stats bar
+    statsBar.textContent = nodes.length + ' AKOs \u00b7 ' + edges.length + ' connectors';
   }
 
   function tick() {
-    const w = canvas.width / devicePixelRatio;
-    const h = canvas.height / devicePixelRatio;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
 
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -772,8 +756,8 @@ function copyInstall() {
   };
 
   function draw() {
-    const w = canvas.width / devicePixelRatio;
-    const h = canvas.height / devicePixelRatio;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     ctx.clearRect(0, 0, w, h);
 
     ctx.lineWidth = 0.5;
@@ -793,16 +777,6 @@ function copyInstall() {
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-
-    // Live data badge
-    if (liveData) {
-      ctx.save();
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = '#22d3ee';
-      ctx.font = '10px monospace';
-      ctx.fillText('LIVE · ' + nodes.length + ' AKOs · ' + edges.length + ' connectors', 12, 18);
-      ctx.restore();
-    }
   }
 
   function loop(ts) {
@@ -813,12 +787,11 @@ function copyInstall() {
     draw();
   }
 
-  // Hover tooltips (only when interactive)
+  // Hover tooltips (graph mode only)
   canvas.addEventListener('mousemove', function(e) {
-    if (!interactive) { tooltip.style.display = 'none'; return; }
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    if (!graphMode) return;
+    const mx = e.clientX;
+    const my = e.clientY;
 
     let hit = null;
     for (const n of nodes) {
@@ -829,13 +802,13 @@ function copyInstall() {
     if (hit && hit.label) {
       const classNames = { F: 'Formal', E: 'Empirical', M: 'Model', I: 'Interpretive', R: 'Regime' };
       const tag = hit.akoClass
-        ? `<span class="ako-class-tag" style="background:${hit.color};color:#08080d">${classNames[hit.akoClass] || hit.akoClass}</span>`
+        ? '<span class="ako-class-tag" style="background:' + hit.color + ';color:#08080d">' + (classNames[hit.akoClass] || hit.akoClass) + '</span>'
         : '';
       const text = hit.label.length > 200 ? hit.label.slice(0, 200) + '...' : hit.label;
       tooltip.innerHTML = tag + text;
       tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
-      tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+      tooltip.style.left = (mx + 12) + 'px';
+      tooltip.style.top = (my - 10) + 'px';
     } else {
       tooltip.style.display = 'none';
     }
@@ -845,15 +818,23 @@ function copyInstall() {
     tooltip.style.display = 'none';
   });
 
-  // Explore button: remove overlay, enable interaction
-  exploreBtn.addEventListener('click', function(e) {
-    e.preventDefault();
-    overlay.classList.add('hidden');
-    canvas.classList.add('interactive');
-    interactive = true;
+  // Enter graph mode
+  window.enterGraphMode = function() {
+    graphMode = true;
+    document.body.classList.add('graph-mode');
+  };
+
+  // Exit graph mode (click logo)
+  document.getElementById('nav-logo').addEventListener('click', function(e) {
+    if (graphMode) {
+      e.preventDefault();
+      graphMode = false;
+      document.body.classList.remove('graph-mode');
+      tooltip.style.display = 'none';
+    }
   });
 
-  // Init: try API, fallback to random
+  // Init
   initFallback();
   requestAnimationFrame(loop);
   window.addEventListener('resize', resize);
@@ -871,6 +852,7 @@ function copyInstall() {
   const signoutBtn = document.getElementById('btn-signout');
   const navUser = document.getElementById('nav-user');
   const navUserName = document.getElementById('nav-user-name');
+  const linkPricing = document.getElementById('link-pricing');
 
   // Check for token in URL fragment (from OAuth callback redirect)
   const hash = window.location.hash;
@@ -879,6 +861,8 @@ function copyInstall() {
     if (token) {
       localStorage.setItem('ako_session', token);
       window.location.hash = '';
+      // Logged in — go straight to graph mode
+      window.enterGraphMode();
     }
   }
 
@@ -904,6 +888,8 @@ function copyInstall() {
     .then(data => {
       const name = (data.given_name + ' ' + data.family_name).trim() || data.orcid;
       showSignedIn(name + (data.verified ? ' \u2713' : ''));
+      // Returning authenticated user — enter graph mode
+      window.enterGraphMode();
     })
     .catch(() => {
       localStorage.removeItem('ako_session');
@@ -929,6 +915,17 @@ function copyInstall() {
     }
     localStorage.removeItem('ako_session');
     showSignedOut();
+    // Exit graph mode on sign out
+    document.body.classList.remove('graph-mode');
+  });
+
+  // Hide pricing link in graph mode
+  linkPricing.addEventListener('click', function(e) {
+    if (document.body.classList.contains('graph-mode')) {
+      e.preventDefault();
+      document.body.classList.remove('graph-mode');
+      setTimeout(() => { document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' }); }, 100);
+    }
   });
 })();
 </script>
