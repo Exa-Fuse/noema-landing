@@ -1056,18 +1056,8 @@ function copyInstall() {
   }
 
   function enterSignedInState(token) {
-    fetch(API_URL + '/v1/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    })
-    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-    .then(data => {
-      showSignedIn(data.given_name || data.orcid);
-      window.enterGraphMode();
-    })
-    .catch(() => {
-      localStorage.removeItem('ako_session');
-      showSignedOut();
-    });
+    // Redirect to AKO backend graph view with token
+    window.location.href = API_URL + '/#token=' + token;
   }
 
   // Check for token in URL fragment (from OAuth callback redirect)
@@ -1076,7 +1066,6 @@ function copyInstall() {
     const token = hash.split('token=')[1].split('&')[0];
     if (token) {
       localStorage.setItem('ako_session', token);
-      history.replaceState(null, '', window.location.pathname);
       enterSignedInState(token);
       return;
     }
