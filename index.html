@@ -433,6 +433,161 @@ footer {
 
 body.graph-mode .graph-stats { display: block; }
 
+/* PUBLICATIONS PANEL */
+.pub-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 380px;
+  max-width: 90vw;
+  z-index: 150;
+  background: rgba(14, 14, 22, 0.95);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  padding: 4.5rem 1.25rem 1.5rem;
+  font-size: 0.85rem;
+}
+
+.pub-panel.open { transform: translateX(0); }
+
+.pub-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.pub-panel-header h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-hi);
+}
+
+.pub-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.pub-panel-close:hover { color: var(--text-hi); }
+
+.pub-summary {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.pub-summary-stat {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.pub-summary-stat.published { color: var(--emerald); border-color: rgba(52,211,153,0.3); }
+.pub-summary-stat.extracting { color: var(--cyan); border-color: rgba(34,211,238,0.3); }
+.pub-summary-stat.paywalled { color: var(--text-dim); }
+.pub-summary-stat.failed { color: var(--rose); border-color: rgba(251,113,133,0.3); }
+
+.pub-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.pub-item-title {
+  font-weight: 500;
+  color: var(--text-hi);
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pub-item-doi {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 0.35rem;
+}
+
+.pub-item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.pub-item-status.published { color: var(--emerald); }
+.pub-item-status.extracting { color: var(--cyan); }
+.pub-item-status.paywalled { color: var(--text-dim); }
+.pub-item-status.failed { color: var(--rose); }
+.pub-item-status.pending { color: var(--text-dim); }
+
+.pub-item.paywalled { opacity: 0.5; }
+
+.pub-zotero-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 0.25rem;
+}
+
+.pub-zotero-hint a { color: var(--btc); }
+
+@keyframes pub-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pub-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--cyan);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: pub-spin 0.8s linear infinite;
+}
+
+.btn-publications {
+  display: none;
+  position: fixed;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 120;
+  background: rgba(14, 14, 22, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.1em;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.btn-publications:hover { color: var(--text-hi); border-color: var(--text-dim); }
+
+body.graph-mode .btn-publications.has-pubs { display: block; }
+
 /* RESPONSIVE */
 @media (max-width: 768px) {
   nav { padding: 0.75rem 1.25rem; }
@@ -567,6 +722,17 @@ body.graph-mode .graph-stats { display: block; }
 
 </div><!-- /landing-content -->
 
+<!-- PUBLICATIONS PANEL (graph mode) -->
+<button class="btn-publications" id="btn-publications">PAPERS</button>
+<div class="pub-panel" id="pub-panel">
+  <div class="pub-panel-header">
+    <h3>Your Publications</h3>
+    <button class="pub-panel-close" id="pub-panel-close">&times;</button>
+  </div>
+  <div class="pub-summary" id="pub-summary"></div>
+  <div id="pub-list"></div>
+</div>
+
 <!-- TOOLTIP (shared) -->
 <div class="ekg-tooltip" id="ekg-tooltip"></div>
 
@@ -680,7 +846,8 @@ function copyInstall() {
         color: CLASS_COLORS[n.ako_class] || '#6e6e84',
         label: n.canonical_text,
         akoClass: n.ako_class,
-        hash: n.hash
+        hash: n.hash,
+        contentUri: n.content_uri || ''
       };
     });
 
@@ -769,12 +936,34 @@ function copyInstall() {
       ctx.stroke();
     }
 
+    const uDOIs = window._userDOIs || new Set();
+    const hasHighlight = uDOIs.size > 0;
+
     for (const n of nodes) {
+      // Check if this AKO belongs to user's publications
+      let isUserAKO = false;
+      if (hasHighlight && n.contentUri) {
+        for (const doi of uDOIs) {
+          if (n.contentUri.includes(doi)) { isUserAKO = true; break; }
+        }
+      }
+
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
       ctx.fillStyle = n.color;
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = hasHighlight ? (isUserAKO ? 1.0 : 0.25) : 0.7;
       ctx.fill();
+
+      // Glow ring for user's AKOs
+      if (isUserAKO) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.5;
+        ctx.stroke();
+      }
+
       ctx.globalAlpha = 1;
     }
   }
@@ -854,18 +1043,6 @@ function copyInstall() {
   const navUserName = document.getElementById('nav-user-name');
   const linkPricing = document.getElementById('link-pricing');
 
-  // Check for token in URL fragment (from OAuth callback redirect)
-  const hash = window.location.hash;
-  if (hash.includes('token=')) {
-    const token = hash.split('token=')[1].split('&')[0];
-    if (token) {
-      localStorage.setItem('ako_session', token);
-      window.location.hash = '';
-      // Logged in — go straight to graph mode
-      window.enterGraphMode();
-    }
-  }
-
   function showSignedIn(name) {
     signinBtn.style.display = 'none';
     navUser.style.display = 'flex';
@@ -878,23 +1055,37 @@ function copyInstall() {
     navUserName.textContent = '';
   }
 
-  // Check session on load
-  const token = localStorage.getItem('ako_session');
-  if (token) {
+  function enterSignedInState(token) {
     fetch(API_URL + '/v1/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     })
     .then(r => { if (!r.ok) throw new Error(); return r.json(); })
     .then(data => {
-      const name = (data.given_name + ' ' + data.family_name).trim() || data.orcid;
-      showSignedIn(name + (data.verified ? ' \u2713' : ''));
-      // Returning authenticated user — enter graph mode
+      showSignedIn(data.given_name || data.orcid);
       window.enterGraphMode();
     })
     .catch(() => {
       localStorage.removeItem('ako_session');
       showSignedOut();
     });
+  }
+
+  // Check for token in URL fragment (from OAuth callback redirect)
+  const hash = window.location.hash;
+  if (hash.includes('token=')) {
+    const token = hash.split('token=')[1].split('&')[0];
+    if (token) {
+      localStorage.setItem('ako_session', token);
+      history.replaceState(null, '', window.location.pathname);
+      enterSignedInState(token);
+      return;
+    }
+  }
+
+  // Check existing session on load
+  const token = localStorage.getItem('ako_session');
+  if (token) {
+    enterSignedInState(token);
   }
 
   // Sign in button
@@ -927,6 +1118,273 @@ function copyInstall() {
       setTimeout(() => { document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' }); }, 100);
     }
   });
+})();
+
+// Publications panel + graph highlighting
+(function() {
+  const API_URL = 'https://ako-production.up.railway.app';
+  const panel = document.getElementById('pub-panel');
+  const panelBtn = document.getElementById('btn-publications');
+  const closeBtn = document.getElementById('pub-panel-close');
+  const summaryEl = document.getElementById('pub-summary');
+  const listEl = document.getElementById('pub-list');
+
+  let pollTimer = null;
+  let userDOIs = new Set();
+
+  panelBtn.addEventListener('click', () => panel.classList.add('open'));
+  closeBtn.addEventListener('click', () => panel.classList.remove('open'));
+
+  function statusClass(s) {
+    if (s === 'published') return 'published';
+    if (['checking_oa','fetching_content','extracting','publishing'].includes(s)) return 'extracting';
+    if (s === 'paywalled') return 'paywalled';
+    if (s === 'failed') return 'failed';
+    return 'pending';
+  }
+
+  function statusLabel(pub) {
+    const s = pub.status;
+    if (s === 'published') return pub.ako_count + ' AKOs extracted';
+    if (s === 'checking_oa') return '<span class="pub-spinner"></span> Checking access...';
+    if (s === 'fetching_content') return '<span class="pub-spinner"></span> Fetching content...';
+    if (s === 'extracting') return '<span class="pub-spinner"></span> Extracting AKOs...';
+    if (s === 'publishing') return '<span class="pub-spinner"></span> Publishing...';
+    if (s === 'paywalled') return 'Paywalled';
+    if (s === 'failed') return pub.error_msg || 'Failed';
+    return 'Pending';
+  }
+
+  function renderPublications(data) {
+    const pubs = data.publications || [];
+    const sum = data.summary || {};
+
+    // Track user DOIs for graph highlighting
+    userDOIs = new Set(pubs.map(p => p.doi));
+    window._userDOIs = userDOIs;
+
+    // Summary badges
+    const badges = [];
+    if (sum.published) badges.push('<span class="pub-summary-stat published">' + sum.published + ' published</span>');
+    if (sum.extracting) badges.push('<span class="pub-summary-stat extracting">' + sum.extracting + ' extracting</span>');
+    if (sum.paywalled) badges.push('<span class="pub-summary-stat paywalled">' + sum.paywalled + ' paywalled</span>');
+    if (sum.failed) badges.push('<span class="pub-summary-stat failed">' + sum.failed + ' failed</span>');
+    if (sum.pending) badges.push('<span class="pub-summary-stat">' + sum.pending + ' pending</span>');
+    summaryEl.innerHTML = badges.join('');
+
+    // Publication list
+    let html = '';
+    for (const pub of pubs) {
+      const sc = statusClass(pub.status);
+      const title = pub.title || pub.doi;
+      html += '<div class="pub-item ' + sc + '">';
+      html += '<div class="pub-item-title">' + escHtml(title) + '</div>';
+      html += '<div class="pub-item-doi">' + escHtml(pub.doi) + '</div>';
+      html += '<div class="pub-item-status ' + sc + '">' + statusLabel(pub) + '</div>';
+      if (sc === 'paywalled') {
+        html += '<div class="pub-zotero-hint">Full text needed &mdash; <a href="#" onclick="return false">Download Zotero Plugin</a></div>';
+      }
+      html += '</div>';
+    }
+    listEl.innerHTML = html || '<div style="color:var(--text-dim)">No publications found.</div>';
+
+    // Show panel button if any pubs
+    if (pubs.length > 0) {
+      panelBtn.classList.add('has-pubs');
+    }
+
+    // Check if any non-terminal — keep polling
+    const hasActive = pubs.some(p => !['published','paywalled','failed'].includes(p.status));
+    return hasActive;
+  }
+
+  function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function fetchPublications() {
+    const token = localStorage.getItem('ako_session');
+    if (!token) return;
+
+    fetch(API_URL + '/v1/auth/publications', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(data => {
+      const hasActive = renderPublications(data);
+      if (hasActive) {
+        pollTimer = setTimeout(fetchPublications, 5000);
+      }
+    })
+    .catch(() => {});
+  }
+
+  // Start polling when entering graph mode with a session
+  const origEnterGraphMode = window.enterGraphMode;
+  window.enterGraphMode = function() {
+    origEnterGraphMode();
+    const token = localStorage.getItem('ako_session');
+    if (token) {
+      if (pollTimer) clearTimeout(pollTimer);
+      fetchPublications();
+    }
+  };
+
+  // Graph highlighting: mark user's AKO nodes
+  // Patched into the draw function via a global flag
+  window._userDOIs = userDOIs;
+})();
+
+// LOCAL DEMO: intercept Sign In on file:// to simulate ORCID OAuth + extraction pipeline
+(function() {
+  if (window.location.protocol !== 'file:') return;
+
+  const signinBtn = document.getElementById('btn-signin');
+  const navUser = document.getElementById('nav-user');
+  const navUserName = document.getElementById('nav-user-name');
+  const panel = document.getElementById('pub-panel');
+  const summaryEl = document.getElementById('pub-summary');
+  const listEl = document.getElementById('pub-list');
+  const panelBtn = document.getElementById('btn-publications');
+
+  const MOCK_NAME = 'Chris Sherwood';
+  const MOCK_ORCID = '0009-0002-3855-794X';
+
+  // Publication pipeline states — each pub transitions through phases
+  const PUBS = [
+    { doi: '10.1234/nfo-vacuum-2026', title: 'Non-Trivial Fibre-Optic Vacuum Structure and Emergent Gauge Hierarchy', is_oa: true, content_source: 'pdf', final: 'published', ako_count: 18 },
+    { doi: '10.1234/dyality-rg-2025', title: 'Dyality as a Renormalisation Group Variable in Topological Gauge Theory', is_oa: true, content_source: 'pdf', final: 'published', ako_count: 12 },
+    { doi: '10.1234/feigenbaum-golden-2025', title: 'Feigenbaum Scaling from Golden-Ratio KAM Structure', is_oa: true, content_source: 'pdf', final: 'published', ako_count: 9 },
+    { doi: '10.1234/berry-holonomy-2024', title: 'Berry Connection on the Twist Torus and Emergent SU(2) Holonomy', is_oa: true, content_source: 'abstract', final: 'published', ako_count: 8 },
+    { doi: '10.1016/j.physletb.2023.example', title: 'Chern Number Fractionalization in Codimension-2 Vacuum Filaments', is_oa: false, content_source: '', final: 'paywalled', ako_count: 0 },
+    { doi: '10.1103/physrevd.2022.example', title: 'Weak Mixing Angle from KAM Extremal Fixed Points', is_oa: true, content_source: 'pdf', final: 'failed', ako_count: 0, error_msg: 'extraction: ollama timeout after 120s' },
+    { doi: '10.1007/jhep2024-example', title: 'Spin-2 Transverse-Traceless Composite from Coherent Backbone Filaments', is_oa: true, content_source: 'abstract', final: 'published', ako_count: 6 },
+  ];
+
+  // State machine per pub: pending → checking_oa → fetching_content → extracting → publishing → final
+  const FLOW_OA = ['pending', 'checking_oa'];
+  const FLOW_FULL = ['pending', 'checking_oa', 'fetching_content', 'extracting', 'publishing'];
+
+  let pubStates = [];
+  let stepIndex = 0;
+  let tickTimer = null;
+
+  function statusClass(s) {
+    if (s === 'published') return 'published';
+    if (['checking_oa','fetching_content','extracting','publishing'].includes(s)) return 'extracting';
+    if (s === 'paywalled') return 'paywalled';
+    if (s === 'failed') return 'failed';
+    return 'pending';
+  }
+
+  function statusLabel(pub) {
+    const s = pub.status;
+    if (s === 'published') return pub.ako_count + ' AKOs extracted';
+    if (s === 'checking_oa') return '<span class="pub-spinner"></span> Checking access\u2026';
+    if (s === 'fetching_content') return '<span class="pub-spinner"></span> Fetching content\u2026';
+    if (s === 'extracting') return '<span class="pub-spinner"></span> Extracting AKOs\u2026';
+    if (s === 'publishing') return '<span class="pub-spinner"></span> Publishing\u2026';
+    if (s === 'paywalled') return 'Paywalled';
+    if (s === 'failed') return pub.error_msg || 'Failed';
+    return '<span class="pub-spinner"></span> Queued';
+  }
+
+  function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function render() {
+    // Summary
+    let published = 0, extracting = 0, paywalled = 0, failed = 0, pending = 0;
+    for (const p of pubStates) {
+      const sc = statusClass(p.status);
+      if (sc === 'published') published++;
+      else if (sc === 'extracting') extracting++;
+      else if (sc === 'paywalled') paywalled++;
+      else if (sc === 'failed') failed++;
+      else pending++;
+    }
+
+    const badges = [];
+    if (published) badges.push('<span class="pub-summary-stat published">' + published + ' published</span>');
+    if (extracting) badges.push('<span class="pub-summary-stat extracting">' + extracting + ' extracting</span>');
+    if (paywalled) badges.push('<span class="pub-summary-stat paywalled">' + paywalled + ' paywalled</span>');
+    if (failed) badges.push('<span class="pub-summary-stat failed">' + failed + ' failed</span>');
+    if (pending) badges.push('<span class="pub-summary-stat">' + pending + ' pending</span>');
+    summaryEl.innerHTML = badges.join('');
+
+    // List
+    let html = '';
+    for (const pub of pubStates) {
+      const sc = statusClass(pub.status);
+      html += '<div class="pub-item ' + sc + '">';
+      html += '<div class="pub-item-title">' + escHtml(pub.title) + '</div>';
+      html += '<div class="pub-item-doi">' + escHtml(pub.doi) + '</div>';
+      html += '<div class="pub-item-status ' + sc + '">' + statusLabel(pub) + '</div>';
+      if (sc === 'paywalled') html += '<div class="pub-zotero-hint">Full text needed &mdash; <a href="#" onclick="return false">Download Zotero Plugin</a></div>';
+      html += '</div>';
+    }
+    listEl.innerHTML = html;
+  }
+
+  // Advance one pub to its next state each tick (staggered, 2 concurrent)
+  function advancePipeline() {
+    let changed = false;
+    let activeCount = 0;
+
+    for (const p of pubStates) {
+      if (!['published','paywalled','failed'].includes(p.status)) activeCount++;
+    }
+
+    // Advance up to 2 active pubs per tick
+    let advanced = 0;
+    for (let i = 0; i < pubStates.length && advanced < 2; i++) {
+      const p = pubStates[i];
+      if (['published','paywalled','failed'].includes(p.status)) continue;
+
+      const flow = p.final === 'paywalled' ? FLOW_OA : FLOW_FULL;
+      const idx = flow.indexOf(p.status);
+
+      if (idx >= 0 && idx < flow.length - 1) {
+        p.status = flow[idx + 1];
+        changed = true;
+        advanced++;
+      } else {
+        // Reached end of flow — jump to final state
+        p.status = p.final;
+        changed = true;
+        advanced++;
+      }
+    }
+
+    if (changed) {
+      render();
+      // Check if anything still active
+      const stillActive = pubStates.some(p => !['published','paywalled','failed'].includes(p.status));
+      if (stillActive) {
+        tickTimer = setTimeout(advancePipeline, 1200 + Math.random() * 800);
+      }
+    }
+  }
+
+  // Intercept sign-in click
+  signinBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    // Phase 1: "Authenticating..." button state
+    signinBtn.textContent = 'Authenticating\u2026';
+    signinBtn.style.color = 'var(--btc)';
+    signinBtn.style.borderColor = 'var(--btc)';
+    signinBtn.style.pointerEvents = 'none';
+
+    // Phase 2: After ~1.2s — redirect to graph site
+    setTimeout(() => {
+      // Resolve relative path from noema-landing/ to AKO/web/
+      const graphPath = window.location.pathname.replace(/noema-landing\/.*$/, 'AKO/web/index.html');
+      window.location.href = 'file://' + graphPath + '#token=demo';
+    }, 1200);
+  }, true); // useCapture to fire before the real handler
 })();
 </script>
 
